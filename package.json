@@ -57,6 +57,7 @@
     "@loopback/rest": "^11.1.2",
     "@loopback/rest-explorer": "^4.1.2",
     "@loopback/service-proxy": "^4.1.2",
+    "dotenv": "^16.0.0",
     "loopback-connector-mongodb": "^5.6.0",
     "tslib": "^2.0.0"
   },

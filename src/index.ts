@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import {ApplicationConfig, MatcherApiApplication} from './application';
 
 export * from './application';

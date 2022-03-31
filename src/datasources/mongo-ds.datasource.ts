@@ -4,13 +4,13 @@ import {juggler} from '@loopback/repository';
 const config = {
   name: 'mongo_ds',
   connector: 'mongodb',
-  url: 'mongodb+srv://yaniss:tagataga@cluster0.zjlcg.mongodb.net/back_api?retryWrites=true&w=majority',
+  url: `${process.env.MONGO_URL}`,
   host: '',
   port: 0,
   user: '',
   password: '',
   database: '',
-  useNewUrlParser: true
+  useNewUrlParser: true,
 };
 
 // Observe application's life cycle to disconnect the datasource when
@@ -18,8 +18,10 @@ const config = {
 // gracefully. The `stop()` method is inherited from `juggler.DataSource`.
 // Learn more at https://loopback.io/doc/en/lb4/Life-cycle.html
 @lifeCycleObserver('datasource')
-export class MongoDsDataSource extends juggler.DataSource
-  implements LifeCycleObserver {
+export class MongoDsDataSource
+  extends juggler.DataSource
+  implements LifeCycleObserver
+{
   static dataSourceName = 'mongo_ds';
   static readonly defaultConfig = config;
 
