@@ -1,4 +1,5 @@
-import {Entity, model, property} from '@loopback/repository';
+import {Entity, hasMany, model, property} from '@loopback/repository';
+import {User} from './user.model';
 
 @model({settings: {strict: false}})
 export class Meet extends Entity {
@@ -9,6 +10,13 @@ export class Meet extends Entity {
   })
   id?: string;
 
+  @property({
+    type: 'boolean',
+  })
+  matched?: boolean;
+
+  @hasMany(() => User)
+  users: User[];
   // Define well-known properties here
 
   // Indexer property to allow additional data

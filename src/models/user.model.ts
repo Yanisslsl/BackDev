@@ -33,9 +33,13 @@ export class User extends Entity {
   })
   username?: string;
 
+
   // must keep it
   // feat email unique
-
+  @property({
+    type: 'string',
+  })
+  meetId?: string;
   @property({
     type: 'string',
     required: true,
