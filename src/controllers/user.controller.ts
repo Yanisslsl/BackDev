@@ -1,25 +1,33 @@
 import {authenticate, TokenService} from '@loopback/authentication';
 import {
   Credentials,
-  MyUserService,
   TokenServiceBindings,
-  User,
-  UserRepository,
-  UserServiceBindings
+  UserRelations,
+  UserServiceBindings,
 } from '@loopback/authentication-jwt';
 import {inject} from '@loopback/core';
-import {model, property, repository} from '@loopback/repository';
+import {
+  FilterExcludingWhere,
+  model,
+  property,
+  repository,
+} from '@loopback/repository';
 import {
   get,
   getModelSchemaRef,
+  param,
+  patch,
   post,
   requestBody,
-  SchemaObject
+  response,
+  SchemaObject,
 } from '@loopback/rest';
 import {SecurityBindings, securityId, UserProfile} from '@loopback/security';
 import {genSalt, hash} from 'bcryptjs';
 import _ from 'lodash';
-
+import {User} from '../models/user.model';
+import {UserRepository} from '../repositories';
+import {CustomUserService} from '../services/user.service';
 @model()
 export class NewUserRequest extends User {
   @property({
@@ -63,11 +71,11 @@ export class UserController {
     @inject(TokenServiceBindings.TOKEN_SERVICE)
     public jwtService: TokenService,
     @inject(UserServiceBindings.USER_SERVICE)
-    public userService: MyUserService,
+    public userService: CustomUserService,
     @inject(SecurityBindings.USER, {optional: true})
     public user: UserProfile,
     @repository(UserRepository) protected userRepository: UserRepository,
-  ) { }
+  ) {}
 
   @post('/users/login', {
     responses: {
@@ -123,6 +131,22 @@ export class UserController {
     return currentUserProfile[securityId];
   }
 
+  @get('/users/{id}')
+  @response(200, {
+    description: 'Meet model instance',
+    content: {
+      'application/json': {
+        schema: getModelSchemaRef(User, {includeRelations: true}),
+      },
+    },
+  })
+  async findById(
+    @param.path.string('id') id: string,
+    @param.filter(User, {exclude: 'where'}) filter?: FilterExcludingWhere<User>,
+  ): Promise<User> {
+    return this.userRepository.findById(id, filter);
+  }
+
   @post('/signup', {
     responses: {
       '200': {
@@ -157,5 +181,48 @@ export class UserController {
     await this.userRepository.userCredentials(savedUser.id).create({password});
 
     return savedUser;
+  }
+
+  @patch('/users/{id}')
+  @response(204, {
+    description: 'user PATCH success',
+  })
+  async updateById(
+    @param.path.string('id') id: string,
+    @requestBody({
+      content: {
+        'application/json': {
+          schema: getModelSchemaRef(User, {partial: true}),
+        },
+      },
+    })
+    user: User,
+  ): Promise<void> {
+    await this.userRepository.updateById(id, user);
+  }
+
+  @get('/users/{id}/meets')
+  @response(200, {
+    description: 'Array of Meet model instances',
+  })
+  async findMeets(@param.path.string('id') id: string): Promise<UserRelations> {
+    const user = await this.userRepository.findById(id);
+    return user.meets;
+  }
+
+  @get('/users')
+  @response(200, {
+    description: 'Array of User model instances',
+    content: {
+      'application/json': {
+        schema: {
+          type: 'array',
+          items: getModelSchemaRef(User, {includeRelations: true}),
+        },
+      },
+    },
+  })
+  async findAll(): Promise<User[]> {
+    return this.userRepository.find();
   }
 }
