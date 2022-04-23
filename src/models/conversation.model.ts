@@ -1,8 +1,8 @@
-import {Entity, hasMany, model, property} from '@loopback/repository';
-import {User} from './user.model';
+import {belongsTo, Entity, model, property} from '@loopback/repository';
+import {Meet} from './meet.model';
 
 @model({settings: {strict: false}})
-export class Meet extends Entity {
+export class Conversation extends Entity {
   @property({
     type: 'string',
     id: true,
@@ -10,13 +10,8 @@ export class Meet extends Entity {
   })
   id?: string;
 
-  @property({
-    type: 'boolean',
-  })
-  matched?: boolean;
-
-  @hasMany(() => User)
-  users: User[];
+  @belongsTo(() => Meet)
+  meetId: string;
 
   // Define well-known properties here
 
@@ -24,13 +19,13 @@ export class Meet extends Entity {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   [prop: string]: any;
 
-  constructor(data?: Partial<Meet>) {
+  constructor(data?: Partial<Conversation>) {
     super(data);
   }
 }
 
-export interface MeetRelations {
+export interface ConversationRelations {
   // describe navigational properties here
 }
 
-export type MeetWithRelations = Meet & MeetRelations;
+export type ConversationWithRelations = Conversation & ConversationRelations;

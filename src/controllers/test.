@@ -1,0 +1,6 @@
+kubectl minio tenant create minio-tenant-1       \
+  --servers                 2                    \
+  --volumes                 4                   \
+  --capacity                50Gi                \
+  --storage-class           minio-local-storage    \
+  --namespace               minio-tenant-1

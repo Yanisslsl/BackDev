@@ -18,12 +18,14 @@ import {
   response,
 } from '@loopback/rest';
 import {Meet} from '../models';
-import {MeetRepository} from '../repositories';
+import {ConversationRepository, MeetRepository} from '../repositories';
 
 export class MeetController {
   constructor(
     @repository(MeetRepository)
     public meetRepository: MeetRepository,
+    @repository(ConversationRepository)
+    public conversationRepository: ConversationRepository,
   ) {}
 
   @post('/meets')
@@ -49,9 +51,9 @@ export class MeetController {
         or: [{usersIds: meet.usersIds}, {usersIds: meet.usersIds.reverse()}],
       },
     });
-    console.log(currentMeet, meet.usersIds.reverse());
     if (currentMeet) {
       await this.meetRepository.updateById(currentMeet.id, {matched: true});
+      await this.conversationRepository.create({meetId: currentMeet.id});
       return {matched: true};
     }
     return this.meetRepository.create(meet);
