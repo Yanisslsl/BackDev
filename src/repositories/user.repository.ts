@@ -9,9 +9,9 @@ import {
   DefaultCrudRepository,
   HasOneRepositoryFactory,
   juggler,
-  repository,
-} from '@loopback/repository';
-import {User} from '../models';
+  repository, HasManyRepositoryFactory} from '@loopback/repository';
+import {User, Meet} from '../models';
+import {MeetRepository} from './meet.repository';
 
 export class UserRepository extends DefaultCrudRepository<
   User,
@@ -23,13 +23,17 @@ export class UserRepository extends DefaultCrudRepository<
     typeof User.prototype.id
   >;
 
+  public readonly meets: HasManyRepositoryFactory<Meet, typeof User.prototype.id>;
+
   constructor(
     @inject(`datasources.${UserServiceBindings.DATASOURCE_NAME}`)
     dataSource: juggler.DataSource,
     @repository.getter('UserCredentialsRepository')
-    protected userCredentialsRepositoryGetter: Getter<UserCredentialsRepository>,
+    protected userCredentialsRepositoryGetter: Getter<UserCredentialsRepository>, @repository.getter('MeetRepository') protected meetRepositoryGetter: Getter<MeetRepository>,
   ) {
     super(User, dataSource);
+    this.meets = this.createHasManyRepositoryFactoryFor('meets', meetRepositoryGetter,);
+    this.registerInclusionResolver('meets', this.meets.inclusionResolver);
     this.userCredentials = this.createHasOneRepositoryFactoryFor(
       'userCredentials',
       userCredentialsRepositoryGetter,

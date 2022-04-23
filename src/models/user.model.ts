@@ -4,7 +4,8 @@
 // License text available at https://opensource.org/licenses/MIT
 
 import {UserCredentials} from '@loopback/authentication-jwt';
-import {Entity, hasOne, model, property} from '@loopback/repository';
+import {Entity, hasMany, hasOne, model, property} from '@loopback/repository';
+import {Meet} from './meet.model';
 
 @model({
   settings: {
@@ -33,13 +34,12 @@ export class User extends Entity {
   })
   username?: string;
 
-
   // must keep it
   // feat email unique
-  @property({
-    type: 'string',
-  })
-  meetId?: string;
+
+  @hasMany(() => Meet, {keyTo: 'userId'})
+  meets: Meet[];
+
   @property({
     type: 'string',
     required: true,
