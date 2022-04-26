@@ -44,17 +44,29 @@ export class MeetController {
         },
       },
     })
-    meet: Omit<Meet, 'id'>,
+    meet: Meet,
   ): Promise<any> {
-    const currentMeet = await this.meetRepository.findOne({
+    const userIds: any = [];
+    let userIdsReversed: any = [];
+
+    meet.usersIds.forEach((userId: string) => {
+      userIds.push(userId);
+      userIdsReversed.push(userId);
+    });
+    userIdsReversed = userIdsReversed.reverse();
+    console.log(userIds, userIdsReversed);
+
+    const currentMeet: any = await this.meetRepository.findOne({
       where: {
-        or: [{usersIds: meet.usersIds}, {usersIds: meet.usersIds.reverse()}],
+        or: [{usersIds: userIds}, {usersIds: userIdsReversed}],
       },
     });
+    console.log(currentMeet, userIdsReversed, userIds);
     if (currentMeet) {
-      await this.meetRepository.updateById(currentMeet.id, {matched: true});
+      console.log('hello');
       await this.conversationRepository.create({meetId: currentMeet.id});
-      return {matched: true};
+      await this.meetRepository.updateById(currentMeet.id, {matched: true});
+      return currentMeet;
     }
     return this.meetRepository.create(meet);
   }
