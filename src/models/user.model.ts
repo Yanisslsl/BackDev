@@ -6,6 +6,7 @@
 import {UserCredentials} from '@loopback/authentication-jwt';
 import {Entity, hasMany, hasOne, model, property} from '@loopback/repository';
 import {Meet} from './meet.model';
+import {AppFile} from './app-file.model';
 
 @model({
   settings: {
@@ -40,6 +41,8 @@ export class User extends Entity {
   @hasMany(() => Meet, {keyTo: 'userId'})
   meets: Meet[];
 
+  @hasMany(() => AppFile)
+  appFiles: AppFile[];
   @property({
     type: 'string',
     required: true,

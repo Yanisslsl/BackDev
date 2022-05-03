@@ -7,6 +7,7 @@ import {
 } from '@loopback/authentication-jwt';
 import {inject} from '@loopback/core';
 import {
+  Filter,
   FilterExcludingWhere,
   model,
   property,
@@ -25,8 +26,13 @@ import {
 import {SecurityBindings, securityId, UserProfile} from '@loopback/security';
 import {genSalt, hash} from 'bcryptjs';
 import _ from 'lodash';
+import {AppFile} from '../models';
 import {User} from '../models/user.model';
-import {UserRepository} from '../repositories';
+import {
+  ConversationRepository,
+  MeetRepository,
+  UserRepository,
+} from '../repositories';
 import {CustomUserService} from '../services/user.service';
 @model()
 export class NewUserRequest extends User {
@@ -75,6 +81,10 @@ export class UserController {
     @inject(SecurityBindings.USER, {optional: true})
     public user: UserProfile,
     @repository(UserRepository) protected userRepository: UserRepository,
+    @repository(MeetRepository)
+    public meetRepository: MeetRepository,
+    @repository(ConversationRepository)
+    public conversationRepository: ConversationRepository,
   ) {}
 
   @post('/users/login', {
@@ -223,6 +233,83 @@ export class UserController {
     },
   })
   async findAll(): Promise<User[]> {
-    return this.userRepository.find();
+    return this.userRepository.find({
+      include: [
+        {
+          relation: 'appFiles',
+        },
+      ],
+    });
+  }
+
+  @get('/users/{id}/conversations')
+  @response(200, {
+    description: 'Array of Meet model instances',
+  })
+  async findConversations(
+    @param.path.string('id') id: string,
+  ): Promise<UserRelations> {
+    const result: any = [];
+    const m = await this.meetRepository.find({
+      where: {usersIds: {inq: id}},
+    });
+    const res: any = [];
+    m.forEach((meet: any) => {
+      const conv = this.conversationRepository.find({
+        where: {meetId: meet.id},
+      });
+      res.push(conv);
+    });
+
+    const t = await Promise.all(res);
+
+    const u = t.flat(2);
+
+    return u;
+  }
+
+  @get('/users/{id}/app-files', {
+    responses: {
+      '200': {
+        description: 'Array of User has many AppFile',
+        content: {
+          'application/json': {
+            schema: {type: 'array', items: getModelSchemaRef(AppFile)},
+          },
+        },
+      },
+    },
+  })
+  async find(
+    @param.path.string('id') id: string,
+    @param.query.object('filter') filter?: Filter<AppFile>,
+  ): Promise<AppFile[]> {
+    return this.userRepository.appFiles(id).find(filter);
+  }
+
+  @post('/users/{id}/app-files', {
+    responses: {
+      '200': {
+        description: 'User model instance',
+        content: {'application/json': {schema: getModelSchemaRef(AppFile)}},
+      },
+    },
+  })
+  async create(
+    @param.path.string('id') id: typeof User.prototype.id,
+    @requestBody({
+      content: {
+        'application/json': {
+          schema: getModelSchemaRef(AppFile, {
+            title: 'NewAppFileInUser',
+            exclude: ['id'],
+            optional: ['userId'],
+          }),
+        },
+      },
+    })
+    appFile: Omit<AppFile, 'id'>,
+  ): Promise<AppFile> {
+    return this.userRepository.appFiles(id).create(appFile);
   }
 }

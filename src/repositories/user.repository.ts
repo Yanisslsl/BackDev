@@ -10,8 +10,9 @@ import {
   HasOneRepositoryFactory,
   juggler,
   repository, HasManyRepositoryFactory} from '@loopback/repository';
-import {User, Meet} from '../models';
+import {User, Meet, AppFile} from '../models';
 import {MeetRepository} from './meet.repository';
+import {AppFileRepository} from './app-file.repository';
 
 export class UserRepository extends DefaultCrudRepository<
   User,
@@ -25,13 +26,17 @@ export class UserRepository extends DefaultCrudRepository<
 
   public readonly meets: HasManyRepositoryFactory<Meet, typeof User.prototype.id>;
 
+  public readonly appFiles: HasManyRepositoryFactory<AppFile, typeof User.prototype.id>;
+
   constructor(
     @inject(`datasources.${UserServiceBindings.DATASOURCE_NAME}`)
     dataSource: juggler.DataSource,
     @repository.getter('UserCredentialsRepository')
-    protected userCredentialsRepositoryGetter: Getter<UserCredentialsRepository>, @repository.getter('MeetRepository') protected meetRepositoryGetter: Getter<MeetRepository>,
+    protected userCredentialsRepositoryGetter: Getter<UserCredentialsRepository>, @repository.getter('MeetRepository') protected meetRepositoryGetter: Getter<MeetRepository>, @repository.getter('AppFileRepository') protected appFileRepositoryGetter: Getter<AppFileRepository>,
   ) {
     super(User, dataSource);
+    this.appFiles = this.createHasManyRepositoryFactoryFor('appFiles', appFileRepositoryGetter,);
+    this.registerInclusionResolver('appFiles', this.appFiles.inclusionResolver);
     this.meets = this.createHasManyRepositoryFactoryFor('meets', meetRepositoryGetter,);
     this.registerInclusionResolver('meets', this.meets.inclusionResolver);
     this.userCredentials = this.createHasOneRepositoryFactoryFor(
