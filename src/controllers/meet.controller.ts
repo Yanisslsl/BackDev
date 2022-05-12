@@ -54,24 +54,22 @@ export class MeetController {
   ): Promise<any> {
     const userIds: any = [];
     let userIdsReversed: any = [];
-
-    meet.usersIds.forEach((userId: string) => {
-      userIds.push(userId);
-      userIdsReversed.push(userId);
-    });
+    if (meet.usersIds) {
+      meet.usersIds.forEach((userId: string) => {
+        userIds.push(userId);
+        userIdsReversed.push(userId);
+      });
+    }
     userIdsReversed = userIdsReversed.reverse();
-    console.log(userIds, userIdsReversed);
 
     const currentMeet: any = await this.meetRepository.findOne({
       where: {
         or: [{usersIds: userIds}, {usersIds: userIdsReversed}],
       },
     });
-    console.log(currentMeet, userIdsReversed, userIds);
     if (currentMeet) {
-      console.log('hello');
       const res: any = [];
-      meet.usersIds.forEach((userId: string) => {
+      meet.usersIds?.forEach((userId: string) => {
         res.push(this.userRepository.findById(userId));
       });
       const users = await Promise.all(res);
@@ -84,6 +82,8 @@ export class MeetController {
       });
       return {matched: true, ...conversation, updatedMeet};
     }
+    meet.matched = false;
+    console.log(meet);
     return this.meetRepository.create(meet);
   }
 

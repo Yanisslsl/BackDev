@@ -18,6 +18,9 @@ export class Meet extends Entity {
     type: 'string',
   })
   userId?: string;
+
+  @property.array(String)
+  usersIds?: string[];
   // Define well-known properties here
 
   // Indexer property to allow additional data

@@ -273,35 +273,61 @@ export class UserController {
     description: 'Array of Meet model instances',
   })
   async findUsers(@param.path.string('id') id: string): Promise<any> {
+    const allUsersIds: any = [];
+    const result: any = [];
+    const final: any = [];
+
     const res = await this.meetRepository.find({
       where: {
-        and: [{usersIds: {nin: [`${id}`]}}, {matched: false}],
+        and: [{usersIds: {inq: [`${id}`]}}, {matched: false}],
       },
     });
-    let result: any = [];
-    res.forEach((meet: any) => {
-      meet.usersIds.forEach((userId: any) => {
-        if (userId !== id) {
-          result.push(this.userRepository.findById(userId));
-        }
-      });
+    const allUsers = await this.userRepository.find({});
+    allUsers.forEach((user: any) => {
+      allUsersIds.push(user.id);
     });
-    result = await Promise.all(result);
-    if (!result) return;
+    const matched = await this.meetRepository.find({
+      where: {
+        and: [{usersIds: {inq: [`${id}`]}}, {matched: true}],
+      },
+    });
+    res.forEach((meet: any) => {
+      if (meet.usersIds) {
+        meet.usersIds.forEach((userId: any) => {
+          if (userId !== id) {
+            result.push(userId);
+          }
+        });
+      }
+    });
+
+    matched.forEach((meet: any) => {
+      if (meet.usersIds) {
+        meet.usersIds.forEach((userId: any) => {
+          if (userId !== id) {
+            final.push(userId);
+          }
+        });
+      }
+    });
+
+    let finalResult = [_.difference(allUsersIds, final), ...result].flat(2);
     const uniqueIds: any = [];
-    console.log(result);
-    result = result.filter((user: any) => {
-      const isDuplicate = uniqueIds.includes(user.id);
-
+    finalResult = finalResult.filter((id: any) => {
+      const isDuplicate = uniqueIds.includes(id);
       if (!isDuplicate) {
-        uniqueIds.push(user.id);
-
+        uniqueIds.push(id);
         return true;
       }
-
       return false;
     });
-    return result;
+
+    console.log('UNIQ', uniqueIds);
+    const users: any = [];
+    finalResult.forEach((userId: any) => {
+      users.push(this.userRepository.findById(userId));
+    });
+    return await Promise.all(users);
   }
 
   @get('/users/{id}/app-files', {
