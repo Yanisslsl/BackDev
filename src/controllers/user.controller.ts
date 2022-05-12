@@ -216,8 +216,8 @@ export class UserController {
     description: 'Array of Meet model instances',
   })
   async findMeets(@param.path.string('id') id: string): Promise<UserRelations> {
-    const user = await this.userRepository.findById(id);
-    return user.meets;
+    // const user = await this.userRepository.findById(id);
+    return this.userRepository.meets(id).find();
   }
 
   @get('/users')
@@ -266,6 +266,42 @@ export class UserController {
     const u = t.flat(2);
 
     return u;
+  }
+
+  @get('/me/{id}/users')
+  @response(200, {
+    description: 'Array of Meet model instances',
+  })
+  async findUsers(@param.path.string('id') id: string): Promise<any> {
+    const res = await this.meetRepository.find({
+      where: {
+        and: [{usersIds: {nin: [`${id}`]}}, {matched: false}],
+      },
+    });
+    let result: any = [];
+    res.forEach((meet: any) => {
+      meet.usersIds.forEach((userId: any) => {
+        if (userId !== id) {
+          result.push(this.userRepository.findById(userId));
+        }
+      });
+    });
+    result = await Promise.all(result);
+    if (!result) return;
+    const uniqueIds: any = [];
+    console.log(result);
+    result = result.filter((user: any) => {
+      const isDuplicate = uniqueIds.includes(user.id);
+
+      if (!isDuplicate) {
+        uniqueIds.push(user.id);
+
+        return true;
+      }
+
+      return false;
+    });
+    return result;
   }
 
   @get('/users/{id}/app-files', {
