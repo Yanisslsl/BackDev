@@ -1,17 +1,10 @@
 import {authenticate, TokenService} from '@loopback/authentication';
 import {
   TokenServiceBindings,
-  UserRelations,
   UserServiceBindings,
 } from '@loopback/authentication-jwt';
 import {inject} from '@loopback/core';
-import {
-  Filter,
-  FilterExcludingWhere,
-  model,
-  property,
-  repository,
-} from '@loopback/repository';
+import {model, property, repository} from '@loopback/repository';
 import {
   get,
   getModelSchemaRef,
@@ -108,7 +101,7 @@ export class UserController {
   })
   async login(
     @requestBody(CredentialsRequestBody) credentials: any,
-  ): Promise<{token: string; id: string; email: string; name: string}> {
+  ): Promise<any> {
     // ensure the user exists, and the password is correct
     const user = await this.userService.verifyCredentials(credentials);
     console.log(credentials);
@@ -120,7 +113,13 @@ export class UserController {
     });
     // create a JSON Web Token based on the user profile
     const token = await this.jwtService.generateToken(userProfile);
-    return {token, id: user.id, email: user.email, name: user.name};
+    return {
+      token,
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      image: user.image,
+    };
   }
 
   @authenticate('jwt')
