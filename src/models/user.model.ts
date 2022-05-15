@@ -41,14 +41,11 @@ export class User extends Entity {
   })
   location: any;
 
-  @property({
-    type: 'object',
-    required: true,
-  })
-
   // must keep it
   // feat email unique
-  @hasMany(() => Meet, {keyTo: 'userId'})
+  @hasMany(() => Meet, {
+    keyTo: 'userId',
+  })
   meets: Meet[];
 
   @hasMany(() => AppFile)
