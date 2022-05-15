@@ -1,10 +1,17 @@
 import {authenticate, TokenService} from '@loopback/authentication';
 import {
   TokenServiceBindings,
+  UserRelations,
   UserServiceBindings,
 } from '@loopback/authentication-jwt';
 import {inject} from '@loopback/core';
-import {model, property, repository} from '@loopback/repository';
+import {
+  Filter,
+  FilterExcludingWhere,
+  model,
+  property,
+  repository,
+} from '@loopback/repository';
 import {
   get,
   getModelSchemaRef,
@@ -101,7 +108,13 @@ export class UserController {
   })
   async login(
     @requestBody(CredentialsRequestBody) credentials: any,
-  ): Promise<any> {
+  ): Promise<{
+    token: string;
+    id: string;
+    email: string;
+    name: string;
+    image: string;
+  }> {
     // ensure the user exists, and the password is correct
     const user = await this.userService.verifyCredentials(credentials);
     console.log(credentials);
