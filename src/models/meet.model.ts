@@ -14,6 +14,9 @@ export class Meet extends Entity {
   })
   matched?: boolean;
 
+  @property.array(String)
+  matchedUserIds?: string[];
+
   @property({
     type: 'string',
   })

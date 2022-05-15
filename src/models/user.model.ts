@@ -5,8 +5,8 @@
 
 import {UserCredentials} from '@loopback/authentication-jwt';
 import {Entity, hasMany, hasOne, model, property} from '@loopback/repository';
-import {Meet} from './meet.model';
 import {AppFile} from './app-file.model';
+import {Meet} from './meet.model';
 
 @model({
   settings: {
@@ -31,13 +31,23 @@ export class User extends Entity {
 
   // must keep it
   @property({
-    type: 'string',
+    type: 'number',
+    default: 150,
   })
-  username?: string;
+  locationLimit?: any;
+
+  @property({
+    type: 'object',
+  })
+  location: any;
+
+  @property({
+    type: 'object',
+    required: true,
+  })
 
   // must keep it
   // feat email unique
-
   @hasMany(() => Meet, {keyTo: 'userId'})
   meets: Meet[];
 

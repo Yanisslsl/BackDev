@@ -5,7 +5,7 @@
       "type": "node",
       "request": "launch",
       "name": "Server auto reload",
-      "runtimeExecutable": "/Users/yanissloisel/.nvm/versions/node/v16.8.0/bin/node",
+      "runtimeExecutable": "/Users/yanissloisel/.nvm/versions/node/v16.15.0/bin/node",
       "program": "${workspaceFolder}/src/index.ts",
       "outFiles": [
         "${workspaceFolder}/**/*.js"

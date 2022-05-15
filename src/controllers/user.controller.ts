@@ -1,6 +1,5 @@
 import {authenticate, TokenService} from '@loopback/authentication';
 import {
-  Credentials,
   TokenServiceBindings,
   UserRelations,
   UserServiceBindings,
@@ -26,13 +25,14 @@ import {
 import {SecurityBindings, securityId, UserProfile} from '@loopback/security';
 import {genSalt, hash} from 'bcryptjs';
 import _ from 'lodash';
-import {AppFile} from '../models';
+import {AppFile, Meet} from '../models';
 import {User} from '../models/user.model';
 import {
   ConversationRepository,
   MeetRepository,
   UserRepository,
 } from '../repositories';
+import findDistance from '../services/location.service';
 import {CustomUserService} from '../services/user.service';
 @model()
 export class NewUserRequest extends User {
@@ -107,13 +107,17 @@ export class UserController {
     },
   })
   async login(
-    @requestBody(CredentialsRequestBody) credentials: Credentials,
+    @requestBody(CredentialsRequestBody) credentials: any,
   ): Promise<{token: string; id: string; email: string; name: string}> {
     // ensure the user exists, and the password is correct
     const user = await this.userService.verifyCredentials(credentials);
+    console.log(credentials);
     // convert a User object into a UserProfile object (reduced set of properties)
     const userProfile = this.userService.convertToUserProfile(user);
     console.log(user);
+    const newUser = this.userRepository.updateById(user.id, {
+      location: credentials.location,
+    });
     // create a JSON Web Token based on the user profile
     const token = await this.jwtService.generateToken(userProfile);
     return {token, id: user.id, email: user.email, name: user.name};
@@ -220,6 +224,63 @@ export class UserController {
     return this.userRepository.meets(id).find();
   }
 
+  @post('/users/{id}/meets')
+  @response(200, {
+    description: 'Meet model instance',
+    content: {'application/json': {schema: getModelSchemaRef(Meet)}},
+  })
+  async createMeet(
+    @requestBody({
+      content: {
+        'application/json': {
+          schema: getModelSchemaRef(Meet, {
+            title: 'NewMeet',
+            exclude: ['id'],
+          }),
+        },
+      },
+    })
+    meet: Meet,
+    @param.path.string('id') userId: string,
+  ): Promise<any> {
+    const userIds: any = [];
+    let userIdsReversed: any = [];
+    if (meet.usersIds) {
+      meet.usersIds.forEach((userId: string) => {
+        userIds.push(userId);
+        userIdsReversed.push(userId);
+      });
+    }
+    userIdsReversed = userIdsReversed.reverse();
+
+    const currentMeet: any = await this.meetRepository.findOne({
+      where: {
+        or: [{usersIds: userIds}, {usersIds: userIdsReversed}],
+      },
+    });
+    if (currentMeet) {
+      const res: any = [];
+      meet.usersIds?.forEach((userId: string) => {
+        res.push(this.userRepository.findById(userId));
+      });
+      const users = await Promise.all(res);
+      const conversation = await this.conversationRepository.create({
+        meetId: currentMeet.id,
+        users: users,
+      });
+      const updatedMeet = await this.meetRepository.updateById(currentMeet.id, {
+        matchedUserIds: [...currentMeet.matchedUserIds, userId],
+        matched: true,
+      });
+      return {matched: true, ...conversation, updatedMeet};
+    }
+    meet.matchedUserIds = [];
+    meet.matchedUserIds?.push(userId);
+    meet.matched = false;
+    console.log(meet);
+    return this.meetRepository.create(meet);
+  }
+
   @get('/users')
   @response(200, {
     description: 'Array of User model instances',
@@ -251,7 +312,7 @@ export class UserController {
   ): Promise<UserRelations> {
     const result: any = [];
     const m = await this.meetRepository.find({
-      where: {usersIds: {inq: id}},
+      where: {usersIds: {inq: [`${id}`]}},
     });
     const res: any = [];
     m.forEach((meet: any) => {
@@ -272,29 +333,41 @@ export class UserController {
   @response(200, {
     description: 'Array of Meet model instances',
   })
-  async findUsers(@param.path.string('id') id: string): Promise<any> {
+  async findUsers(@param.path.string('id') Id: string): Promise<any> {
     const allUsersIds: any = [];
     const result: any = [];
     const final: any = [];
+    const currentUser = await this.userRepository.findById(Id);
 
     const res = await this.meetRepository.find({
+      // all meets where user is in and not matched yet
       where: {
-        and: [{usersIds: {inq: [`${id}`]}}, {matched: false}],
+        and: [
+          {usersIds: {inq: [`${Id}`]}},
+          {matchedUserIds: {inq: [`${Id}`]}},
+          {matched: false},
+        ],
       },
     });
     const allUsers = await this.userRepository.find({});
     allUsers.forEach((user: any) => {
-      allUsersIds.push(user.id);
+      if (user.id !== Id) {
+        allUsersIds.push(user.id);
+      }
     });
     const matched = await this.meetRepository.find({
       where: {
-        and: [{usersIds: {inq: [`${id}`]}}, {matched: true}],
+        and: [
+          {usersIds: {inq: [`${Id}`]}},
+          {matchedUserIds: {inq: [`${Id}`]}},
+          {matched: true},
+        ],
       },
     });
     res.forEach((meet: any) => {
       if (meet.usersIds) {
         meet.usersIds.forEach((userId: any) => {
-          if (userId !== id) {
+          if (userId !== Id) {
             result.push(userId);
           }
         });
@@ -302,9 +375,10 @@ export class UserController {
     });
 
     matched.forEach((meet: any) => {
+      // all users where user is  matched
       if (meet.usersIds) {
         meet.usersIds.forEach((userId: any) => {
-          if (userId !== id) {
+          if (userId !== Id) {
             final.push(userId);
           }
         });
@@ -312,7 +386,7 @@ export class UserController {
     });
 
     let finalResult = [_.difference(allUsersIds, final), ...result].flat(2);
-    const uniqueIds: any = [];
+    const uniqueIds: any = result;
     finalResult = finalResult.filter((id: any) => {
       const isDuplicate = uniqueIds.includes(id);
       if (!isDuplicate) {
@@ -322,12 +396,29 @@ export class UserController {
       return false;
     });
 
-    console.log('UNIQ', uniqueIds);
     const users: any = [];
     finalResult.forEach((userId: any) => {
       users.push(this.userRepository.findById(userId));
     });
-    return await Promise.all(users);
+    const finalUsers = await Promise.all(users);
+    const endResult: any = [];
+    finalUsers.forEach((user: any) => {
+      if (!user.location) {
+        console.log('hello');
+        endResult.push(user);
+      }
+      const distance = findDistance(user.location, currentUser.location);
+
+      console.log(distance, currentUser.locationLimit);
+
+      if (distance < currentUser.locationLimit) {
+        console.log('hello1');
+
+        endResult.push(user);
+      }
+    });
+    console.log(endResult);
+    return endResult;
   }
 
   @get('/users/{id}/app-files', {
